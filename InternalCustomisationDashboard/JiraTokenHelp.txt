@@ -1,0 +1,8 @@
+create a JiraToken.json file
+
+with
+{
+"url": "{your jira url}"
+"username": "{your username}"
+"password": "{your password}"
+}

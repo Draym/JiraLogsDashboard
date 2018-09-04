@@ -77,3 +77,7 @@ _[Ss]cripts
 # Conf files         #
 ######################
 InternalCustomisationDashboard/JiraToken.json
+######################
+# Angular files      #
+######################
+InternalCustomisationDashboard/SPA/node_modules/*

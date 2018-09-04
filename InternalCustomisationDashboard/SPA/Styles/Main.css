@@ -1,0 +1,83 @@
+﻿
+
+/** DEFAULT **/
+h1, .h1, h2, .h2, h3, .h3, h4, .h4, h5, .h5, h6, .h6 {
+    font-family: caslon-webfont, Georgia, serif;
+    font-weight: normal;
+    font-style: normal;
+    color: #333;
+    text-rendering: optimizeLegibility;
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    line-height: 1;
+}
+
+body {
+    font-family: larsseit-webfont, Helvetica, Arial, sans-serif;
+    font-weight: normal;
+    line-height: 1.5;
+    color: #777;
+}
+
+.row-fix {
+    margin-left: -19px;
+    margin-right: -19px;
+}
+
+/** TABLE **/
+.table > thead > tr > th {
+    padding-left: 50px;
+}
+
+.table > tbody > tr > td {
+    border-top: none;
+    padding-left: 40px;
+}
+
+table {
+    border: none;
+    border-collapse: collapse;
+}
+
+    table td {
+        border-left: 1px solid #ddd;
+    }
+
+        table td:first-child {
+            border-left: none;
+        }
+
+/** CONTAINER **/
+.MyContainer {
+    margin-top: 30px;
+}
+
+.row > .panel-body > .row {
+    padding-bottom: 10px;
+}
+/** BUTTONS **/
+.btn-d1 {
+    float: right;
+    background-color: #f5f5f5;
+}
+    .btn-d1:focus {
+        border-color: #ddd;
+        float: right;
+        background-color: #f5f5f5;
+    }
+
+.btn-option {
+}
+
+.btnActive {
+    background-color: #2291ef;
+    color: #040404;
+}
+
+    .btnActive:focus {
+        color: #040404;
+    }
+
+    .btnActive:hover {
+        color: #040404;
+    }

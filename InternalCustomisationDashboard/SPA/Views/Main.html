@@ -1,0 +1,278 @@
+﻿<html>
+
+<body>
+    <div class="MyContainer">
+        <div ng-class="{'col-md-offset-1 col-md-10': GUI.isNavCollapsed, 'col-md-8': !GUI.isNavCollapsed}">
+            <div class="panel panel-default">
+                <div class="panel-heading" style="display: flow-root;">
+                    {{getChartTitle(Selected.Active)}}
+                    <button type="button" class="btn btn-default btn-d1"
+                            ng-click="refresh()" ng-disabled="isBusy">
+                        <i class="fa " ng-class="getSearchIcon()"></i>
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <canvas id="MyChart" ng-show="getActiveChart('MyChart')"></canvas>
+                    <canvas id="MyPie" ng-show="getActiveChart('MyPie')"></canvas>
+                </div>
+            </div>
+        </div>
+        <div id="navUI" class="col-md-4" ng-class="{'navUICollapse': GUI.isNavCollapsed}" style="padding-right:0; margin-bottom:5em">
+            <div class="borderNavUI" ng-class="{'borderNavUICollapsed': GUI.isNavCollapsed}" ng-click="collapseGUI()">
+                <div class="panel panel-default" style="cursor: default;" ng-click="$event.stopPropagation()">
+                    <div class="panel-heading">
+                        <div class="row">
+                            <div class="col-md-3" style="padding-top:5px">
+                                <span>Chart Manager</span>
+                            </div>
+                            <div class="col-md-offset-6 col-md-3">
+                                <input class="form-control" type="text" ng-model="currentYear" ng-disabled="isBusy" id="datepickerYear" ng-change="updateWithCurrentYear()" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="panel-heading">
+                                <div class="col-md-4">
+                                    <h4>Jira Dashboard</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="panel-body">
+                                <div class="row">
+                                    <div class="col-md-12" style="padding-right: 0;">
+                                        <div class="col-md-3" style="padding: 0;">
+                                            <h5 style="margin-top:8px">Total Sales:</h5>
+                                        </div>
+                                        <div class="btn-toolbar col-md-9" role="toolbar" aria-label="Toolbar with button groups" style="padding-right: 0;display:inline-flex">
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalSalesPerTeam()"
+                                                        ng-disabled="getDisabled('TSPT')" ng-class="{'btnActive': Selected.Active == 'TSPT'}">
+                                                    Team
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalSalesPerGroup()"
+                                                        ng-disabled="getDisabled('TSPG')" ng-class="{'btnActive': Selected.Active == 'TSPG'}">
+                                                    Group
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group" style="display:inline-flex">
+                                                <button type="button" class="btn btn-option" ng-click="TotalSalesPerPeople()"
+                                                        ng-disabled="getDisabled('TSPP')" ng-class="{'btnActive': Selected.Active == 'TSPP'}">
+                                                    People
+                                                </button>
+                                                <div style="padding-left: 2px" ng-if="Selected.Active == 'TSPP'">
+                                                    <select class="form-control" ng-options="member as member.name for member in Data.TeamMembers"
+                                                            ng-model="Selected.Team.currentMember" ng-change="TotalSalesPerPeople()"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12" style="padding-right: 0;">
+                                        <div class="col-md-3" style="padding: 0;">
+                                            <h5 style="margin-top:8px">Total Productivity:</h5>
+                                        </div>
+                                        <div class="btn-toolbar col-md-9" role="toolbar" aria-label="Toolbar with button groups" style="padding-right: 0;display:inline-flex">
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalProductivityPerTeam()"
+                                                        ng-disabled="getDisabled('TPPT')" ng-class="{'btnActive': Selected.Active == 'TPPT'}">
+                                                    Team
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalProductivityPerGroup()"
+                                                        ng-disabled="getDisabled('TPPG')" ng-class="{'btnActive': Selected.Active == 'TPPG'}">
+                                                    Group
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group" style="display:inline-flex">
+                                                <button type="button" class="btn btn-option" ng-click="TotalProductivityPerPeople()"
+                                                        ng-disabled="getDisabled('TPPP')" ng-class="{'btnActive': Selected.Active == 'TPPP'}">
+                                                    People
+                                                </button>
+                                                <div style="padding-left: 2px" ng-if="Selected.Active == 'TPPP'">
+                                                    <select class="form-control" ng-options="member as member.name for member in Data.TeamMembers"
+                                                            ng-model="Selected.Team.currentMember" ng-change="TotalProductivityPerPeople()"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12" style="padding-right: 0;">
+                                        <div class="col-md-3" style="padding: 0;">
+                                            <h5 style="margin-top:8px">Total Average/h:</h5>
+                                        </div>
+                                        <div class="btn-toolbar col-md-9" role="toolbar" aria-label="Toolbar with button groups" style="padding-right: 0;display:inline-flex">
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalAveragePerTeam()"
+                                                        ng-disabled="getDisabled('TAPT')" ng-class="{'btnActive': Selected.Active == 'TAPT'}">
+                                                    Team
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalAveragePerGroup()"
+                                                        ng-disabled="getDisabled('TAPG')" ng-class="{'btnActive': Selected.Active == 'TAPG'}">
+                                                    Group
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group" style="display:inline-flex">
+                                                <button type="button" class="btn btn-option" ng-click="TotalAveragePerPeople()"
+                                                        ng-disabled="getDisabled('TAPP')" ng-class="{'btnActive': Selected.Active == 'TAPP'}">
+                                                    People
+                                                </button>
+                                                <div style="padding-left: 2px" ng-if="Selected.Active == 'TAPP'">
+                                                    <select class="form-control" ng-options="member as member.name for member in Data.TeamMembers"
+                                                            ng-model="Selected.Team.currentMember" ng-change="TotalAveragePerPeople()"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12" style="padding-right: 0;">
+                                        <div class="col-md-3" style="padding: 0;">
+                                            <h5 style="margin-top:8px">Total Per People Of:</h5>
+                                        </div>
+                                        <div class="btn-toolbar col-md-9" role="toolbar" aria-label="Toolbar with button groups" style="padding-right: 0;display:inline-flex">
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalPerPeopleOfSales()"
+                                                        ng-disabled="getDisabled('TPPOSA')" ng-class="{'btnActive': Selected.Active == 'TPPOSA'}">
+                                                    Sales (£)
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="TotalPerPeopleOfDevHours()"
+                                                        ng-disabled="getDisabled('TPPOD')" ng-class="{'btnActive': Selected.Active == 'TPPOD'}">
+                                                    Dev (h)
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group" style="display:inline-flex">
+                                                <button type="button" class="btn btn-option" ng-click="TotalPerPeopleOfSupportHours()"
+                                                        ng-disabled="getDisabled('TPPOSU')" ng-class="{'btnActive': Selected.Active == 'TPPOSU'}">
+                                                    Support (h)
+                                                </button>
+                                            </div>
+                                            <div class="btn-group mr-1" role="group" style="display:inline-flex">
+                                                <button type="button" class="btn btn-option" ng-click="TotalPerPeopleOfTickets()"
+                                                        ng-disabled="getDisabled('TPLPOT')" ng-class="{'btnActive': Selected.Active == 'TPLPOT'}">
+                                                    Tickets (qty)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="row">
+                            <div class="panel-heading">
+                                <div class="col-md-6">
+                                    <h4>Custom Tasks Dashboard</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="panel-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <span>Coming soon...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="row">
+                            <div class="panel-heading">
+                                <div class="col-md-5">
+                                    <h4 style="margin-top:5px">Personal Dashboard : </h4>
+                                </div>
+                                <div class="col-md-4" style="padding-left: 0;">
+                                    <select class="form-control" ng-disabled="isBusy" ng-options="member as member.name for member in Data.TeamMembers"
+                                            ng-model="Selected.Personal.currentMember" ng-change="PersonalMainDashboard()"></select>
+                                </div>
+                                <div class="col-md-3">
+                                    <input class="form-control" type="text" ng-model="PCurrentMonthUI" id="datepickerMonth" ng-change="updateWithCurrentMonth()"
+                                           ng-disabled="isBusy || !(getDisabled('TSAP') || getDisabled('PLPOT') || getDisabled('PWDA'))" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="panel-body" ng-if="Selected.Personal.currentMember">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <table class="table">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">This Year</th>
+                                                    <th scope="col">For {{PCurrentMonthUI}} {{currentYear}}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Your Total Sale: £{{Selected.Personal.Data.PerYear}}</td>
+                                                    <td>Your Total Sale: £{{Selected.Personal.Data.PerMonth}}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Average Quote: £{{Selected.Personal.Data.QuoteThisY.average}}/h</td>
+                                                    <td>Average Quote: £{{Selected.Personal.Data.QuoteThisM.average}}/h</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Total hours: {{Selected.Personal.Data.QuoteThisY.hours}}h</td>
+                                                    <td>Total hours: {{Selected.Personal.Data.QuoteThisM.hours}}h</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Quoted projects: {{Selected.Personal.Data.QuoteThisY.success}} / {{Selected.Personal.Data.QuoteThisY.total}}</td>
+                                                    <td>Quoted projects: {{Selected.Personal.Data.QuoteThisM.success}} / {{Selected.Personal.Data.QuoteThisM.total}}</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-12" style="padding-right: 0;">
+                                        <div class="col-md-3" style="padding: 0;">
+                                            <h5 style="margin-top:8px">Low Ticket Perf:</h5>
+                                        </div>
+                                        <div class="btn-toolbar col-md-9" role="toolbar" aria-label="Toolbar with button groups" style="padding-right: 0;display:inline-flex">
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="getDisabled('PLPOT') ? PersonalMainDashboard() : PersonalLowPerformanceOnTickets()"
+                                                        ng-class="{'btnActive': Selected.Active == 'PLPOT'}">
+                                                    {{getDisabled('PLPOT') ? 'ON' : 'OFF'}}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12" style="padding-right: 0;">
+                                        <div class="col-md-3" style="padding: 0;">
+                                            <h5 style="margin-top:8px">Workload Distribution:</h5>
+                                        </div>
+                                        <div class="btn-toolbar col-md-9" role="toolbar" aria-label="Toolbar with button groups" style="padding-right: 0;display:inline-flex">
+                                            <div class="btn-group mr-1" role="group">
+                                                <button type="button" class="btn btn-option" ng-click="getDisabled('PWDA') ? PersonalMainDashboard() : PersonalWorkloadDistributionAverage()"
+                                                        ng-class="{'btnActive': Selected.Active == 'PWDA'}">
+                                                    {{getDisabled('PWDA') ? 'ON' : 'OFF'}}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12" style="margin-top: 10em">
+            <button class="btn btn-light" style="margin-left: 20px" ng-click="authTimeDoctor()">TimeDoctor Auth</button>
+        </div>
+    </div>
+</body>
+</html>

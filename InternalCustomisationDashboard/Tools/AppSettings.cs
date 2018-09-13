@@ -20,18 +20,32 @@ namespace InternalCustomisationDashboard.Tools
                 return Setting<string>("TimeDoctorSecretId");
             }
         }
-        public static string TimeDoctorConf
+        public static string TimeDoctorProfile
         {
             get
             {
-                return Setting<string>("TimeDoctorConf");
+                return Setting<string>("TimeDoctorProfile");
             }
         }
-        public static string JiraConf
+        public static string TimeDoctorAuth
         {
             get
             {
-                return Setting<string>("JiraConf");
+                return Setting<string>("TimeDoctorAuth");
+            }
+        }
+        public static string JiraProfile
+        {
+            get
+            {
+                return Setting<string>("JiraProfile");
+            }
+        }
+        public static string JiraAuth
+        {
+            get
+            {
+                return Setting<string>("JiraAuth");
             }
         }
         public static string BaseUrlApi

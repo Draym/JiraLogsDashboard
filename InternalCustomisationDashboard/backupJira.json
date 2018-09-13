@@ -1,0 +1,35 @@
+﻿{
+  "project": "CST",
+  "selectedUsers": [
+    {
+      "user_id": "",
+      "full_name": "NataljaL",
+      "color": "rgba(255, 99, 132, {a})"
+    },
+    {
+      "user_id": "",
+      "full_name": "matt.bartol",
+      "color": "rgba(54, 162, 235, {a})"
+    },
+    {
+      "user_id": "",
+      "full_name": "kevin.andres",
+      "color": "rgba(255, 159, 64, {a})"
+    },
+    {
+      "user_id": "",
+      "full_name": "daniel.parkman",
+      "color": "rgba(75, 192, 192, {a})"
+    },
+    {
+      "user_id": "",
+      "full_name": "maria.kim",
+      "color": "rgba(153, 102, 255, {a})"
+    },
+    {
+      "user_id": "",
+      "full_name": "bruno.magalhaes",
+      "color": "rgba(255, 206, 86, {a})"
+    }
+  ]
+}

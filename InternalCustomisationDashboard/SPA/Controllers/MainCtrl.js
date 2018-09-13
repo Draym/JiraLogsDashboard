@@ -1,4 +1,4 @@
-﻿var MainCtrl = function ($scope, RequestApi, Auth) {
+﻿var MainCtrl = function ($scope, RequestApi, Auth, $location) {
     $scope.isBusy = false;
     $scope.GUI = { isNavCollapsed: false };
     $scope.Params = {};
@@ -7,7 +7,6 @@
     $scope.Parsed = {};
     $scope.Selected = { Personal: {}, Team: {} };
     $scope.currentYear;
-    $scope.PCurrentMonth;
 
     var correctQuote = 80;
 
@@ -16,22 +15,20 @@
     var chartTitles = {
         'TSPT': 'Total Sales of the Team',
         'TSPG': 'Total Sales by Group',
-        'TSPP': 'Total Sales per People',
-        'TPPT': 'Total Revenues of the Team',
-        'TPPG': 'Total Revenues by Group',
-        'TPPP': 'Total Revenues per People',
+        'TTPG': 'Total Ticket/type by People',
+        'TMST': 'Total Money Spread of the Team',
+        'TMSG': 'Total Money Spread by Group',
         'TAPT': 'Total Average/h per Team',
         'TAPG': 'Total Average/h per Group',
-        'TAPP': 'Total Average/h per People',
         'TSAP': 'Total Revenues & Average/h',
         'TPPOSA': 'Total Revenues per People',
         'TPPOD': 'Total Dev hours per People',
         'TPPOSU': 'Total Support hours per People',
         'TPLPOT': 'Total Tickets per People',
         'PLPOT': 'Low Performance on Tickets over the Year in %',
-        'PWDA': 'Workload Distribution over the Year'
+        'PWDA': 'Workload Distribution over the Year',
+        'PAOT': 'Average/h over the Year'
     };
-
     var prettyColors = ['rgba(255, 99, 132, {a})',
         'rgba(54, 162, 235, {a})',
         'rgba(255, 206, 86, {a})',
@@ -41,7 +38,6 @@
     var prettyTeamColor = 'rgba(59,68,75, {a})';
 
     var monthValues = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    var ignoredDevs = ["beatriz.tejedor"];
 
     /** PARSING **/
     var addWorklogsToIssues = function () {
@@ -78,7 +74,9 @@
     }
     var addNewValuesToIssues = function () {
         for (var i in $scope.Data.Issues) {
-            var developer = $scope.Data.Issues[i].Assignee ? $scope.Data.Issues[i].Assignee : getObjectById($scope.Data.Issues[i].CustomFields, 'Name', 'Developer');
+            var developer = getObjectById($scope.Data.Issues[i].CustomFields, 'Name', 'Developer');
+            if (!developer)
+                developer = $scope.Data.Issues[i].Assignee;
             var price = getObjectById($scope.Data.Issues[i].CustomFields, 'Name', 'Price');
 
             $scope.Data.Issues[i].Developer = (developer ? (developer.Values ? developer.Values[0] : developer) : null);
@@ -97,7 +95,7 @@
             var developer = $scope.Data.Issues[i].Developer;
             var price = getObjectById($scope.Data.Issues[i].CustomFields, 'Name', 'Price');
 
-            if (developer && !ignoredDevs.includes(developer)) {
+            if (developer) {
                 if ($scope.Data.Issues[i].Status.Name === "Archived") {
                     $scope.Parsed.ArchivedIssues.push($scope.Data.Issues[i]);
                 }
@@ -110,26 +108,11 @@
                     initArrayToObject($scope.Parsed.UnPricedIssues, developer);
                     $scope.Parsed.UnPricedIssues[developer].push($scope.Data.Issues[i]);
                 }
-                addTeamMember(developer);
             } else {
                 $scope.Parsed.UnassignedIssues.push($scope.Data.Issues[i]);
             }
         }
     };
-
-    var addTeamMember = function (name) {
-        for (var i in $scope.Data.TeamMembers) {
-            if ($scope.Data.TeamMembers[i].name === name)
-                return;
-        }
-        if ($scope.Data.TeamMembers.length > prettyColors.length) {
-            $scope.Data.TeamMembers.push({ name: name, color: 'rgba(0, 0, 0, {a})' });
-            console.log("AddTeamMember: please add new pretty colors");
-        } else {
-            $scope.Data.TeamMembers.push({ name: name, color: prettyColors[$scope.Data.TeamMembers.length] });
-        }
-    };
-
 
     /** CREATING VALUE DATA **/
     var getTotalSalePerMonthData = function (id) {
@@ -154,7 +137,13 @@
         }
         return result;
     };
-    var getTotalProductivityPerMonthData = function (id) {
+
+    /**
+    * Will calculate the money spread per month per user
+    * @param {string} id - optionnal - user full_name
+    * @returns {array} - array which contains 1 number for each months (12)
+    */
+    var getTotalMoneySpreadPerMonthData = function (id) {
         var result = [];
         var months = {};
 
@@ -176,6 +165,13 @@
         }
         return result;
     };
+
+    /**
+    * Will calculate the sales of a specific date range
+    * @param {object} sales - retrieve it with getTotalSalePerMonthData() for example
+    * @param {array} months - optionnal - specify months as int
+    * @returns {number}
+    */
     var getTotalSaleAtMonth = function (sales, months) {
         var value = 0;
         for (var i in sales) {
@@ -185,6 +181,41 @@
         }
         return value;
     };
+
+    /**
+    * Will search the number of ticket type per users
+    * @param {object} params - optionnal - use it as follow if needed { month: #for specific month in int#, id: #for specific user#}
+    * @returns {object} - as { #type (sql, macro..)# : { #user# : int }, ... }
+    */
+    var getTotalTicketsPerTypeData = function (params) {
+        var result = {};
+        if (!params)
+            params = {};
+
+        for (var memberId in $scope.Parsed.Issues) {
+            if (params.id && memberId != params.id)
+                continue;
+            for (var i in $scope.Parsed.Issues[memberId]) {
+                if (!$scope.Parsed.Issues[memberId][i].Components || $scope.Parsed.Issues[memberId][i].Components.length == 0)
+                    continue;
+                var component = $scope.Parsed.Issues[memberId][i].Components[0].Name;
+                if (params && params.type != component)
+                    continue;
+                var date = new Date($scope.Parsed.Issues[memberId][i].Created);
+                if (date.getFullYear() != $scope.currentYear
+                    || (params.month && params.month != date.getMonth()))
+                    continue;
+                if (!result[component])
+                    result[component] = {};
+                if (!result[component][memberId])
+                    result[component][memberId] = 1;
+                else
+                    result[component][memberId] += 1;
+            }
+        }
+        console.log("TotalTickets: ", result, params)
+        return result;
+    }
 
     var getTotalQuotesFinalStateData = function (id) {
         var result = { average: [], total: [], success: [], hours: [], errors: [], missQuoted: [] };
@@ -209,7 +240,6 @@
                 var average = $scope.Parsed.Issues[memberId][i].Price / ($scope.Parsed.Issues[memberId][i].WorklogsTotalTime / 3600);
                 if (average > 1000) {
                     result.errors.push($scope.Parsed.Issues[memberId][i]);
-                    continue;
                 }
                 months[month] += $scope.Parsed.Issues[memberId][i].Price;
                 result.total[month] += 1;
@@ -281,8 +311,8 @@
             if (quotes.hours[i])
                 result.hours += quotes.hours[i];
         }
+        console.log(result);
         result.average = round(result.average / notNullQuotes);
-
         return result;
     };
 
@@ -361,7 +391,7 @@
                 var date = new Date($scope.Parsed.Issues[memberId][i].Created);
                 if (date.getFullYear() != $scope.currentYear)
                     continue;
-                var value = { data: [] };
+                var value = { data: [], color: prettyColors[0] };
                 var average = round(Number($scope.Parsed.Issues[memberId][i].Price) / ($scope.Parsed.Issues[memberId][i].WorklogsTotalTime / 3600));
                 if (average * 100 / correctQuote > 100)
                     continue;
@@ -389,7 +419,7 @@
                     continue;
                 var component = $scope.Parsed.Support[i].Components[0].Name;
                 if (!result["Support"])
-                    result["Support"] = { label: "Support", data: [] };
+                    result["Support"] = { label: "Support", data: [], color: prettyColors[0] };
 
                 for (var month in $scope.Parsed.Support[i].Worklogs) {
                     if (!result["Support"].data[month])
@@ -399,7 +429,7 @@
                 }
             }
         }
-
+        var colorId = 1;
         for (var memberId in $scope.Parsed.Issues) {
             if (id && memberId != id)
                 continue;
@@ -409,8 +439,10 @@
                 var component = $scope.Parsed.Issues[memberId][i].Components[0].Name;
                 if (type && type != component)
                     continue;
-                if (!result[component])
-                    result[component] = { label: component, data: [] };
+                if (!result[component]) {
+                    result[component] = { label: component, data: [], color: (colorId > prettyColors.length - 1 ? prettyTeamColor : prettyColors[colorId]) };
+                    ++colorId;
+                }
                 for (var month in $scope.Parsed.Issues[memberId][i].Worklogs) {
                     if (!result[component].data[month])
                         result[component].data[month] = 0;
@@ -428,10 +460,10 @@
     }
 
     /** ISSUES **/
-    var InitIssues = function () {
+    var InitIssues = function (callbacks) {
         $scope.Data.Issues = [];
 
-        getIssues(100, 1, function (issues) {
+        getIssues(100, 1, function () {
             getWorklogs(function () {
                 console.log("Worklogs:", $scope.Data.Worklogs);
                 filterWorklogs();
@@ -448,16 +480,15 @@
                     $scope.Selected.Func();
                 else
                     $scope.TotalSalesPerGroup();
+                triggerCallback(callbacks);
             });
         });
     };
 
     var getIssues = function (max, page, callback) {
         $scope.isBusy = true;
-        RequestApi.GET("Jira/GetIssues", function (response) {
+        RequestApi.GET("Jira/GetTeamIssues", function (response) {
             ++page;
-            $scope.isBusy = false;
-
             if (response.data.ClassName && response.data.ClassName.includes("Exception")) {
                 console.log("Error: ", response.data);
                 callback();
@@ -466,10 +497,14 @@
             for (var i in response.data) {
                 $scope.Data.Issues.push(response.data[i]);
             }
-            if (response.data.length === max)
+            console.log("GetIssues: ", response);
+            if (response.data.length != 0)
                 getIssues(max, page, callback);
-            else if (callback)
-                callback();
+            else {
+                $scope.isBusy = false;
+                if (callback)
+                    callback();
+            }
         }, function (error) {
             $scope.isBusy = false;
             console.log("error:", error);
@@ -511,7 +546,11 @@
         $scope.Data.Worklogs = {};
 
         RequestApi.GET("TimeDoctor/GetTeamUserIds", function (response) {
-            getWorklogsForYear($scope.currentYear, 0, response.data, [
+            var userIds = [];
+            for (var i in response.data) {
+                userIds.push(response.data[i].user_id);
+            }
+            getWorklogsForYear($scope.currentYear, 0, userIds, [
                 {},
                 getWorklogsForYear,
                 getWorklogsForYear,
@@ -546,7 +585,6 @@
         RequestApi.GET("TimeDoctor/GetWorklogs", function (response) {
             ++page;
             $scope.isBusy = false;
-
             response.data = JSON.parse(response.data);
 
             if (response.data.ClassName && response.data.ClassName.includes("Exception")) {
@@ -572,12 +610,12 @@
         var datasets = [];
 
         for (var i in $scope.Data.TeamMembers) {
-            if (member && member.name !== $scope.Data.TeamMembers[i].name)
+            if (member && member.full_name != $scope.Data.TeamMembers[i].full_name)
                 continue;
             datasets.push({
                 type: type,
-                label: '# ' + $scope.Data.TeamMembers[i].name,
-                data: Func($scope.Data.TeamMembers[i].name),
+                label: '# ' + $scope.Data.TeamMembers[i].full_name,
+                data: Func($scope.Data.TeamMembers[i].full_name),
                 backgroundColor: $scope.Data.TeamMembers[i].color.replace('{a}', colorShade),
                 borderColor: $scope.Data.TeamMembers[i].color.replace('{a}', '1'),
                 borderWidth: 1
@@ -600,21 +638,49 @@
         updateChart("MyChart", { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], datasets: datasets, type: type, options: { legend: { display: true } } });
     };
 
-    $scope.initChartBulkPerMonth = function (Func, type, colorShade, id, displayLegend, useColor) {
-        var result = Func(id);
+    $scope.initChartBy2AxesGen = function (Func, type, colorShade, param) {
+        var datasets = [];
+
+        var result = Func(param);
+        var labels = [];
+        var colorId = 0;
+
+        for (var key in result) {
+            var values = [];
+            for (var key2 in result[key]) {
+                if (!labels.includes(key2)) {
+                    labels.push(key);
+                }
+                values.push(result[key][key2]);
+            }
+            datasets.push({
+                type: type,
+                label: '# ' + key,
+                data: values,
+                backgroundColor: (colorId > prettyColors.length - 1 ? prettyTeamColor : prettyColors[colorId]).replace('{a}', colorShade),
+                borderColor: (colorId > prettyColors.length - 1 ? prettyTeamColor : prettyColors[colorId]).replace('{a}', '1'),
+                borderWidth: 1
+            });
+            ++colorId;
+        }
+        updateChart("MyChart", { labels: labels, datasets: datasets, type: type, options: { legend: { display: true } } });
+    };
+
+    $scope.initChartBulkPerMonth = function (Func, type, colorShade, member, displayLegend, useColor) {
+        var result = Func(member.full_name);
         var datasets = [];
         if (!result) {
-            console.log("ChartBulk: result is null");
             return;
         }
+        console.log("ChartBulk: ", result);
         var color = 0;
         for (var i in result) {
             datasets.push({
                 type: type,
                 label: result[i].label,
                 data: result[i].data,
-                backgroundColor: prettyColors[(color >= prettyColors.length || !useColor ? 1 : color)].replace('{a}', colorShade),
-                borderColor: prettyColors[(color >= prettyColors.length || !useColor ? 1 : color)].replace('{a}', '1'),
+                backgroundColor: result[i].color.replace('{a}', colorShade),
+                borderColor: result[i].color.replace('{a}', 1),
                 borderWidth: 1
             });
             ++color;
@@ -622,21 +688,21 @@
         updateChart("MyChart", { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], datasets: datasets, type: type, options: { legend: { display: (displayLegend ? displayLegend : false) } } });
     };
 
-    $scope.initTotalSaleAndAveragePersonalChart = function (memberId) {
+    $scope.initTotalSaleAndAveragePersonalChart = function (member) {
         var datasets = [];
 
         datasets.push({
             type: 'line',
             label: '# Sales (£)',
-            data: getTotalSalePerMonthData(memberId),
+            data: getTotalSalePerMonthData(member.full_name),
             backgroundColor: prettyColors[0].replace('{a}', '0.1'),
             borderColor: prettyColors[0].replace('{a}', '1'),
             borderWidth: 1
         });
         datasets.push({
             type: 'line',
-            label: '# Productivity (£)',
-            data: getTotalProductivityPerMonthData(memberId),
+            label: '# MoneySpread (£)',
+            data: getTotalMoneySpreadPerMonthData(member.full_name),
             backgroundColor: prettyColors[1].replace('{a}', '0.1'),
             borderColor: prettyColors[1].replace('{a}', '1'),
             borderWidth: 1
@@ -644,7 +710,7 @@
         datasets.push({
             type: 'line',
             label: '# Average (£/h)',
-            data: getTotalQuotesPerMonthData(memberId).average,
+            data: getTotalQuotesPerMonthData(member.full_name).average,
             backgroundColor: prettyColors[2].replace('{a}', '0.5'),
             borderColor: prettyColors[2].replace('{a}', '1'),
             borderWidth: 1
@@ -659,17 +725,14 @@
         var borderColors = [];
 
         for (var i in $scope.Data.TeamMembers) {
-            values.push(Func($scope.Data.TeamMembers[i].name));
-            labels.push($scope.Data.TeamMembers[i].name);
+            values.push(Func($scope.Data.TeamMembers[i].full_name));
+            labels.push($scope.Data.TeamMembers[i].full_name);
 
             backgroundColors.push($scope.Data.TeamMembers[i].color.replace('{a}', colorShade));
             borderColors.push($scope.Data.TeamMembers[i].color.replace('{a}', '1'));
         }
         updateChart("MyPie", { labels: labels, datasets: [{ data: values, borderWidth: [1], backgroundColor: backgroundColors, borderColor: borderColors }], type: type, options: { legend: { display: true } } });
     };
-
-
-
 
     var updateChart = function (chartId, chartValues) {
         $scope.Selected.ActiveChart = chartId;
@@ -742,31 +805,18 @@
         $scope.Selected.Func = $scope.TotalSalesPerGroup;
         $scope.initChartPerMonthPerPeople(getTotalSalePerMonthData, 'bar', '0.3');
     };
-    $scope.TotalSalesPerPeople = function () {
-        resetFilter(false, true);
-        $scope.Selected.Active = 'TSPP';
-        $scope.Selected.Func = $scope.TotalSalesPerPeople;
-        if ($scope.Selected.Team.currentMember)
-            $scope.initChartPerMonthPerPeople(getTotalSalePerMonthData, 'bar', '0.3', $scope.Selected.Team.currentMember);
-    };
-    $scope.TotalProductivityPerTeam = function () {
+
+    $scope.TotalMoneySpreadPerTeam = function () {
         resetFilter(true, true);
-        $scope.Selected.Active = 'TPPT';
-        $scope.Selected.Func = $scope.TotalProductivityPerTeam;
-        $scope.initChartPerMonthGlobal(getTotalProductivityPerMonthData, 'bar', '0.3');
+        $scope.Selected.Active = 'TMST';
+        $scope.Selected.Func = $scope.TotalMoneySpreadPerTeam;
+        $scope.initChartPerMonthGlobal(getTotalMoneySpreadPerMonthData, 'bar', '0.3');
     };
-    $scope.TotalProductivityPerGroup = function () {
+    $scope.TotalMoneySpreadPerGroup = function () {
         resetFilter(true, true);
-        $scope.Selected.Active = 'TPPG';
-        $scope.Selected.Func = $scope.TotalProductivityPerGroup;
-        $scope.initChartPerMonthPerPeople(getTotalProductivityPerMonthData, 'bar', '0.3');
-    };
-    $scope.TotalProductivityPerPeople = function () {
-        resetFilter(false, true);
-        $scope.Selected.Active = 'TPPP';
-        $scope.Selected.Func = $scope.TotalProductivityPerPeople;
-        if ($scope.Selected.Team.currentMember)
-            $scope.initChartPerMonthPerPeople(getTotalProductivityPerMonthData, 'bar', $scope.Selected.Team.currentMember, '0.3');
+        $scope.Selected.Active = 'TMSG';
+        $scope.Selected.Func = $scope.TotalMoneySpreadPerGroup;
+        $scope.initChartPerMonthPerPeople(getTotalMoneySpreadPerMonthData, 'bar', '0.3');
     };
 
     $scope.TotalAveragePerTeam = function () {
@@ -781,13 +831,17 @@
         $scope.Selected.Func = $scope.TotalAveragePerGroup;
         $scope.initChartPerMonthPerPeople(getTotalAveragePerMonthData, 'line', '0.02');
     };
-    $scope.TotalAveragePerPeople = function () {
-        resetFilter(false, true);
-        $scope.Selected.Active = 'TAPP';
-        $scope.Selected.Func = $scope.TotalAveragePerPeople;
-        if ($scope.Selected.Team.currentMember)
-            $scope.initChartPerMonthPerPeople(getTotalAveragePerMonthData, 'line', '0.3', $scope.Selected.Team.currentMember);
-    };
+
+    $scope.TotalTicketPerTypePerGroup = function () {
+        resetFilter(true, true);
+        $scope.Selected.Active = 'TTPG';
+        $scope.Selected.Func = $scope.TotalTicketPerGroup;
+
+        var currentMonth;
+        if ($scope.Selected.Team.currentMonth)
+            currentMonth = (parseInt($scope.Selected.Team.currentMonth) ? parseInt($scope.Selected.Team.currentMonth) - 1 : (new Date()).getMonth());
+        $scope.initChartBy2AxesGen(getTotalTicketsPerTypeData, 'bar', '0.3', { month: currentMonth, id: $scope.Selected.Personal.currentMember });
+    }
 
     $scope.TotalPerPeopleOfSales = function () {
         resetFilter(true, true);
@@ -814,47 +868,51 @@
         $scope.initPiePerPeople(getTotalTicketsPerPeople, 'pie', '0.2');
     };
 
-
-
     /** CHART MANAGER - PERSONAL **/
-
     $scope.PersonalMainDashboard = function () {
         resetFilter(true, false);
         $scope.Selected.Active = 'TSAP';
         $scope.Selected.Func = $scope.PersonalMainDashboard;
         $scope.Selected.Personal.Data = parsePersonalDashboardData($scope.Selected.Personal.currentMember);
-        $scope.initTotalSaleAndAveragePersonalChart($scope.Selected.Personal.currentMember.name);
+        $scope.initTotalSaleAndAveragePersonalChart($scope.Selected.Personal.currentMember);
     };
-
     var parsePersonalDashboardData = function (member) {
-        var currentMonth = (parseInt($scope.PCurrentMonth) ? parseInt($scope.PCurrentMonth) - 1 : (new Date()).getMonth());
+        var currentMonth = (parseInt($scope.Selected.Personal.currentMonth) ? parseInt($scope.Selected.Personal.currentMonth) - 1 : (new Date()).getMonth());
         var data = {};
 
-        var totalRevenues = getTotalSalePerMonthData(member.name);
+        var totalRevenues = getTotalSalePerMonthData(member.full_name);
         data.PerMonth = getTotalSaleAtMonth(totalRevenues, [currentMonth]);
         data.PerYear = getTotalSaleAtMonth(totalRevenues);
-        var quotes = getTotalQuotesFinalStateData(member.name);
 
+        var quotes = getTotalQuotesFinalStateData(member.full_name);
         data.QuoteThisM = getTotalQuotesAtMonth(quotes, [currentMonth]);
         data.QuoteThisY = getTotalQuotesAtMonth(quotes);
-        console.log("quotes", quotes)
+
+        data.QuoteThisM.globalAverage = round(data.PerMonth / data.QuoteThisM.hours);
+        data.QuoteThisY.globalAverage = round(data.PerYear / data.QuoteThisY.hours);
+
         console.log("DataPerso: ", data);
+        console.log("Quotes", quotes);
         return data;
     };
-
+    $scope.PersonalAverageOnTicket = function () {
+        resetFilter(true, false);
+        $scope.Selected.Active = 'PAOT';
+        $scope.Selected.Func = $scope.PersonalAverageOnTicket;
+        $scope.initChartPerMonthPerPeople(getTotalAveragePerMonthData, 'line', '0.3', $scope.Selected.Personal.currentMember);
+    };
     $scope.PersonalLowPerformanceOnTickets = function () {
         resetFilter(true, false);
         $scope.Selected.Active = 'PLPOT';
         $scope.Selected.Func = $scope.PersonalPerformanceOnTickets;
-        $scope.initChartBulkPerMonth(getLowPerformancePerMonthData, 'bar', '0.2', $scope.Selected.Personal.currentMember.name);
+        $scope.initChartBulkPerMonth(getLowPerformancePerMonthData, 'bar', '0.2', $scope.Selected.Personal.currentMember);
     };
-
     $scope.PersonalWorkloadDistributionAverage = function () {
         resetFilter(true, false);
         $scope.Selected.Active = 'PWDA';
         $scope.Selected.Func = $scope.PersonalWorkloadDistributionAverage;
-        $scope.initChartBulkPerMonth(getAmountWorkPerMonthData, 'line', '0.02', $scope.Selected.Personal.currentMember.name, true, true);
-    }
+        $scope.initChartBulkPerMonth(getAmountWorkPerMonthData, 'line', '0.001', $scope.Selected.Personal.currentMember, true, true);
+    };
 
     /** CHART ACTIONS **/
 
@@ -865,9 +923,7 @@
         if (perso)
             $scope.Selected.Personal = {};
     };
-
     $scope.refresh = function () {
-        console.log("refresh");
         InitIssues();
     };
 
@@ -878,11 +934,9 @@
         else
             return 'fa-refresh';
     };
-
     $scope.getChartTitle = function (id) {
         return chartTitles[id];
     };
-
     $scope.getDisabled = function (id) {
         if ($scope.isBusy || $scope.Selected.Active === id)
             return true;
@@ -890,10 +944,18 @@
     };
 
     /** TOOLS **/
+    var triggerCallback = function (callbacks) {
+        if (callbacks && callbacks[0]) {
+            var callback = callbacks.shift();
+            callback(callbacks);
+        } else {
+            $scope.isBusy = false;
+        }
+    }
+
     var getChartConf = function (code) {
         return ChartsAction[code];
     };
-
     var getObjectById = function (array, id, value) {
         for (var i in array) {
             for (var key in array[i]) {
@@ -903,12 +965,10 @@
         }
         return null;
     };
-
     var initArrayToObject = function (obj, key) {
         if (!obj[key])
             obj[key] = [];
     };
-
     var contains = function (obj, value) {
         for (var i in obj) {
             if (obj[i] == value) {
@@ -930,14 +990,14 @@
 
     var getMinDate = function (year, month) {
         return year + '-' + (month < 10 ? '0' + month : month) + '-01'
-    }
+    };
     var getMaxDate = function (year, month) {
         return year + '-' + (month < 10 ? '0' + month : month) + '-' + new Date(year, month, 0).getDate();
-    }
+    };
 
     var pushArray = function (arr, arr2) {
         arr.push.apply(arr, arr2);
-    }
+    };
 
     var getMonthId = function (month) {
         for (var i in monthValues) {
@@ -945,7 +1005,7 @@
                 return i;
         }
         return 0;
-    }
+    };
 
     $.fn.extend({
         animateCss: function (animationName, callback) {
@@ -977,28 +1037,46 @@
     /** GUI **/
     $scope.collapseGUI = function () {
         $scope.GUI.isNavCollapsed = !$scope.GUI.isNavCollapsed;
-    }
+    };
+    $scope.moveToConfig = function () {
+        $location.path("/config");
+    };
 
     /** DATE **/
     $scope.updateWithCurrentYear = function () {
         InitIssues();
     };
-
     $scope.updateWithCurrentMonth = function () {
-        $scope.PCurrentMonth = parseInt(getMonthId($scope.PCurrentMonthUI)) + 1;
+        $scope.Selected.Personal.currentMonth = parseInt(getMonthId($scope.PCurrentMonthUI)) + 1;
         $scope.Selected.Personal.Data = parsePersonalDashboardData($scope.Selected.Personal.currentMember);
     };
 
-    /** AUTH **/
-    $scope.authTimeDoctor = function () {
-        Auth.TimeDoctor();
-    }
-
     /** INIT **/
-    $scope.init = function () {
+
+    var initTeamMembers = function (callbacks) {
+        $scope.isBusy = true;
+        RequestApi.GET("Jira/GetProfile", function (response) {
+
+            if (response) {
+                $scope.Data.TeamMembers = response.data.selectedUsers;
+
+                for (var i in $scope.Data.TeamMembers) {
+                    $scope.Data.TeamMembers[i].color = $scope.Data.TeamMembers[i].color.replace("rgb", "rgba").replace(")", ",{a})");
+                }
+                console.log("TeamUsers: ", $scope.Data.TeamMembers);
+                $scope.isBusy = false;
+                triggerCallback(callbacks);
+            }
+        }, function (error) {
+            $scope.isBusy = false;
+            console.log("error:", error);
+        });
+    };
+
+    var initCore = function (callbacks) {
         $scope.currentYear = (new Date()).getFullYear();
         $scope.PCurrentMonthUI = monthValues[(new Date()).getMonth()];
-        $scope.PCurrentMonth = (new Date()).getMonth() + 1;
+        $scope.Selected.Personal.currentMonth = (new Date()).getMonth() + 1;
         $("#datepickerYear").datepicker({
             format: 'yyyy',
             viewMode: 'years',
@@ -1014,10 +1092,38 @@
             autoclose: true
         });
         createCharts();
-        InitIssues();
+        triggerCallback(callbacks);
     };
+
+    var initConfiguration = function (callbacks) {
+        $scope.isBusy = true;
+        RequestApi.GET("Jira/IsConfigValid", function (responseJira) {
+            RequestApi.GET("TimeDoctor/IsConfigValid", function (responseTDoctor) {
+
+                if (responseJira && responseTDoctor) {
+                    {
+                        if (responseJira.data == true && responseTDoctor.data == true)
+                            triggerCallback(callbacks);
+                        else {
+                            console.log("Configuration not valid > moveToConfig");
+                            $scope.isBusy = false;
+                            $scope.moveToConfig();
+                        }
+                    }
+                }
+            }, function (error) {
+                $scope.isBusy = false;
+                console.log("error:", error);
+            });
+        }, function (error) {
+            $scope.isBusy = false;
+            console.log("error:", error);
+        });
+    };
+
+    $scope.init = function () {
+        initConfiguration([initCore, initTeamMembers, InitIssues]);
+    }
 
     $scope.init();
 };
-
-MainCtrl.$inject = ['$scope', 'RequestApi', 'Auth'];

@@ -26,20 +26,22 @@
             method: method,
             url: api_url + url + createParametersUrl(parameters),
             data: data,
-            transformRequest: function (obj) {
+            /*
+               transformRequest: function (obj) {
                 var str = [];
                 for (var p in obj)
                     str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
                 return str.join("&");
-            },
+            },*/
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
+                //'Content-Type': 'application/x-www-form-urlencoded'
+                'Content-Type': 'application/json'
             }
         }).then(
           function (response) {
               // success callback
-              if (response.data != null && response.data.success == true) {
-                  success(response);
+              if (response.data != null && response.data.isSuccess) {
+                  success(response.data);
               } else {
                   failure(response);
               }
@@ -61,8 +63,8 @@
         }).then(
           function (response) {
               // success callback
-              if (response.data != null && ((response.data.success != null && response.data.success == true) || response.data.success == null)) {
-                  success(response);
+              if (response.data != null && response.data.isSuccess) {
+                  success(response.data);
               } else {
                   failure(response);
               }
@@ -84,5 +86,3 @@
         }
     };
 }
-
-RequestApi.$inject = ['$http'];

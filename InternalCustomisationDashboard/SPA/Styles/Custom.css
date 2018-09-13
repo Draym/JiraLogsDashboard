@@ -12,28 +12,67 @@
 }
 
 
+/** NAV **/
+#navUI {
+    right: 0;
+}
 
 #navUI {
-  position: fixed;
-  right: 0;
+    transition: 0.5s;
 }
 
-#navUI { transition: 0.5s }
-
-.navUICollapse { right: -41em !important}
+.navUICollapse {
+    right: -41em !important;
+    position: fixed;
+}
 
 .borderNavUI {
-  padding-left: 25px;
-  background: rgba(222, 229, 237, 0.4);
-  box-sizing: border-box;
-  cursor: pointer;
-  border-left: 2px solid #ddd;
-  border-radius: 20px;
-}
-.borderNavUI:hover {
-  background: rgba(222, 229, 237, 0.8);
+    padding-left: 25px;
+    background: rgba(222, 229, 237, 0.4);
+    box-sizing: border-box;
+    cursor: pointer;
+    border-left: 2px solid #ddd;
+    border-radius: 20px;
 }
 
+    .borderNavUI:hover {
+        background: rgba(222, 229, 237, 0.8);
+    }
+
 .borderNavUICollapsed {
-  padding-left: 50px !important;
+    padding-left: 50px !important;
 }
+
+/** TEXT **/
+.title {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 25px;
+}
+
+.sub-title {
+    text-align: left;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.input-title {
+    padding-top: 6px;
+}
+
+.data-list {
+    width: 70%;
+}
+
+    .data-list > .list-group-item {
+        background-color: #FcFcFc;
+    }
+
+/** PANEL **/
+.panel-heading {
+    display: flex;
+}
+
+    .panel-heading h4 {
+        margin-bottom: 0px !important;
+    }

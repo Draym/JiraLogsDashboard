@@ -10,12 +10,14 @@ namespace InternalCustomisationDashboard.Tools
 
         public static string encode(string value)
         {
-            return value;
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(value);
+            return System.Convert.ToBase64String(plainTextBytes);
         }
 
         public static string decode(string value)
         {
-            return value;
+            var base64EncodedBytes = System.Convert.FromBase64String(value);
+            return System.Text.Encoding.UTF8.GetString(base64EncodedBytes);
         }
     }
 }

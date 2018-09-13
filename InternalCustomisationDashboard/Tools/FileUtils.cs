@@ -8,7 +8,7 @@ namespace InternalCustomisationDashboard.Tools
     {
         public static string ReadFile(string path)
         {
-            path = HttpContext.Current.Server.MapPath("~/" + path);
+            //path = HttpContext.Current.Server.MapPath("~/" + path);
             try
             {
                 if (File.Exists(path))
@@ -23,7 +23,7 @@ namespace InternalCustomisationDashboard.Tools
 
         public static void WriteFile(string path, string value)
         {
-            path = HttpContext.Current.Server.MapPath("~/" + path);
+            //path = HttpContext.Current.Server.MapPath("~/" + path);
             try
             {
                 File.WriteAllText(path, value);

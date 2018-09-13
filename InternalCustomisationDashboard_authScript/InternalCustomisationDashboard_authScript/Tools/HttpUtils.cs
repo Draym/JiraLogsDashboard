@@ -1,11 +1,10 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 
-namespace InternalCustomisationDashboard.Tools
+namespace InternalCustomisationDashboard_authScript.Tools
 {
-    public class HttpUtils
+    class HttpUtils
     {
         public static string Get(string uri)
         {

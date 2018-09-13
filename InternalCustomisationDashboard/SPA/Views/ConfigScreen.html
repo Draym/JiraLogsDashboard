@@ -1,0 +1,168 @@
+﻿<html>
+<body>
+    <div class="MyContainer">
+        <div class="col-md-12">
+            <div class="row well" style="padding: 10px">
+                <div class="col-md-12">
+                    <div class="col-md-1 delimiter-right">
+                        <button type="button" class="btn btn-menu-blue" ng-click="moveToDashboards()" ng-disabled="isBusy"><i class="fa fa-chart-line"></i> Dashboards</button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-menu-lightg" style="margin-left: 40px" ng-click="authTimeDoctor()">TimeDoctor Auth</button>
+                        <button class="btn btn-menu-lightg" style="margin-left: 20px" data-toggle="modal" data-target="#loginJira">Jira Auth</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-offset-1 col-md-10">
+            <div class="row well" style="padding: 20px">
+                <div class="row">
+                    <!--Jira-->
+                    <div class="col-md-6 delimiter-right">
+                        <h4 class="title">JIRA - {{Jira.Selected.project}} Dasboard </h4>
+                    </div>
+                    <!--TimeDoctor-->
+                    <div class="col-md-6">
+                        <h4 class="title">TimeDoctor Dasboard</h4>
+                    </div>
+                </div>
+                <div class="row">
+                    <!--Jira-->
+                    <div class="col-md-6 menu-data-left delimiter-right">
+                        <div class="sub-title"><span>Profile:</span></div>
+                        <ul class="list-group data-list">
+                            <li class="list-group-item" style="margin-bottom:10px;width:50%">
+                                <div class="form-group row" style="margin-bottom:0px">
+                                    <label class="col-sm-4 col-form-label" style="padding-top:6px">
+                                        Project:
+                                    </label>
+                                    <div class="col-sm-6">
+                                        <select class="form-control" ng-options="project.Key as project.Key for project in Jira.Data.Projects"
+                                                ng-model="Jira.Selected.project" ng-change="selectProject()"></select>
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                        <ul class="list-group data-list">
+                            <li class="list-group-item">{{Jira.Account.url}}</li>
+                            <li class="list-group-item">{{Jira.Account.username}}</li>
+                        </ul>
+                    </div>
+                    <!--TimeDoctor-->
+                    <div class="col-md-6 menu-data-right">
+                        <div class="sub-title"><span>Profile:</span></div>
+                        <ul class="list-group data-list">
+                            <li class="list-group-item">{{TDoctor.Selected.user.full_name}}</li>
+                            <li class="list-group-item">{{TDoctor.Selected.user.email}}</li>
+                            <li class="list-group-item">{{TDoctor.Selected.user.level}}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+                    <!--Jira-->
+                    <div class="col-md-6 menu-data-left delimiter-right">
+                        <div class="row">
+                            <div class="col-md-1 sub-title input-title"><span>Users:</span></div>
+                            <div class="col-md-5">
+                                <ui-select ng-model="Jira.Data.Selected.currentUser" ng-change="addJiraUser(Jira.Data.Selected.currentUser)">
+                                    <ui-select-match>
+                                        <span ng-bind="Jira.Data.Selected.currentUser.full_name"></span>
+                                    </ui-select-match>
+                                    <ui-select-choices repeat="item in (Jira.Data.Users | filter: UI.search) track by item.id">
+                                        <span ng-bind="item.full_name"></span>
+                                    </ui-select-choices>
+                                </ui-select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top:15px">
+                            <ul class="list-group data-list select-list">
+                                <li class="list-group-item" ng-repeat="user in Jira.Selected.selectedUsers track by $index">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="col-md-4">{{user.full_name}}</div>
+                                            <div class="col-md-4"><color-picker ng-model="user.color" options="options" event-api="colorEventApi"></color-picker></div>
+
+                                            <button type="button" class="close" aria-label="Close" ng-click="deleteJiraUser(user)">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <!--TimeDoctor-->
+                    <div class="col-md-6 menu-data-right">
+                        <div class="row">
+                            <div class="col-md-1 sub-title input-title"><span>Users:</span></div>
+                            <div class="col-md-5">
+                                <ui-select ng-model="TDoctor.Data.Selected.currentUser" ng-change="addTDUser(TDoctor.Data.Selected.currentUser)">
+                                    <ui-select-match>
+                                        <span ng-bind="TDoctor.Data.Selected.currentUser.full_name"></span>
+                                    </ui-select-match>
+                                    <ui-select-choices repeat="item in (TDoctor.Data.Users | filter: UI.search) track by item.id">
+                                        <span ng-bind="item.full_name"></span>
+                                    </ui-select-choices>
+                                </ui-select>
+                            </div>
+                        </div>
+                        <div class="row" style="margin-top:15px">
+                            <ul class="list-group data-list select-list">
+                                <li class="list-group-item" ng-repeat="user in TDoctor.Selected.selectedUsers track by $index">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="col-md-4">{{user.full_name}}</div>
+                                            <button type="button" class="close" aria-label="Close" ng-click="deleteTDUser(user)">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal -->
+    <div class="modal fade" id="loginJira" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header" style="border:none">
+                    <h2 class="title" style="margin-bottom:0px">
+                        Jira Authentification
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </h2>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <section class="login-form col-md-offset-1 col-md-10">
+                                <form role="login">
+                                    <input type="text" placeholder="Url: https://jira.enterprise.com" required class="form-control input-lg" ng-model="JiraAuth.url" value="https://jira.linnworks.com" />
+                                    <input type="text" placeholder="Username: name.lastname" required class="form-control input-lg" ng-model="JiraAuth.username" />
+                                    <input type="password" class="form-control input-lg" id="password" placeholder="Password" required ng-model="JiraAuth.password" />
+
+                                    <button type="submit" class="btn btn-lg btn-primary btn-block" ng-click="authJira()">Log in</button>
+                                </form>
+                            </section>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-danger" id="loginJiraAlert" role="alert" style="display:none">
+                                Login has failed, please try again
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

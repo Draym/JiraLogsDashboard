@@ -8,7 +8,13 @@
             }, function (error) {
                 console.log("error:", error);
             });
+        },
+        Jira: function (login, success, error) {
+            RequestApi.POST("Jira/Auth", login, function (response) {
+                success(response);
+            }, function (response) {
+                error(response);
+            });
         }
     }
 }
-Auth.$inject = ['RequestApi', '$window'];

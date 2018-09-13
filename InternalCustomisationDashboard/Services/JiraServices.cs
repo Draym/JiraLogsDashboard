@@ -1,6 +1,6 @@
 ﻿using Atlassian.Jira;
 using InternalCustomisationDashboard.Models;
-using InternalCustomisationDashboard.Models.AuthData;
+using InternalCustomisationDashboard.ORM;
 using InternalCustomisationDashboard.Tools;
 using Newtonsoft.Json;
 using System;
@@ -13,29 +13,53 @@ namespace InternalCustomiationDashboard.Services
     {
         private Jira _jira;
 
-        public JiraServices()
+        private void Auth()
         {
-            this.JiraAuth();
+            if (!JiraData.Instance.Auth.load())
+                return;
+            try
+            {
+                this.JiraAuth(JiraData.Instance.Auth);
+            }
+            catch (Exception ex)
+            {
+                JiraData.Instance.Auth.delete();
+                Console.WriteLine(ex.Message);
+            }
         }
 
-        public void JiraAuth()
+        public void JiraAuth(JiraData.JiraAuth user)
         {
-            var saveConf = FileUtils.ReadFile(AppSettings.JiraConf);
-            if (saveConf == null)
-                throw new Exception("Auth: file " + AppSettings.JiraConf + " hasn't be found");
-            var profile = JsonConvert.DeserializeObject<JiraProfile>(saveConf).get();
-            
-            _jira = Jira.CreateRestClient(profile.url, profile.username, profile.password);
+            if (user == null)
+                throw new Exception("Login failled: no user provided");
+            try
+            {
+                _jira = Jira.CreateRestClient(user.url, user.username, user.password);
+
+                var check = _jira.Users.GetUserAsync(user.username).Result;
+
+                JiraData.Instance.Auth.set(user);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Login failled: " + ex.Message);
+            }
         }
 
-        public List<Project> getProjects()
+        public IEnumerable<Project> getProjects()
         {
-            return _jira.Projects.GetProjectsAsync().Result.ToList();
+            return _jira.Projects.GetProjectsAsync().Result;
         }
 
         public Project getProject(string name)
         {
             return _jira.Projects.GetProjectAsync(name).Result;
+        }
+
+        public List<JiraUser> getUsers(string project)
+        {
+            //return _jira.Users.SearchUsersAsync("username="+project).Result.ToList();
+            return _jira.Groups.GetUsersAsync(project).Result.ToList();
         }
 
         public List<JiraIssue> getIssues(string jqlSearch, int maxValues, int page)
@@ -53,6 +77,23 @@ namespace InternalCustomiationDashboard.Services
         public JiraIssue getIssue(string key)
         {
             return new JiraIssue(_jira.Issues.GetIssueAsync(key).Result);
+        }
+
+        /** SINGLETON **/
+        private static readonly JiraServices instance = new JiraServices();
+        static JiraServices()
+        {
+        }
+        private JiraServices()
+        {
+            this.Auth();
+        }
+        public static JiraServices Instance
+        {
+            get
+            {
+                return instance;
+            }
         }
     }
 }
